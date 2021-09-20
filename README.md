@@ -1,5 +1,4 @@
 # TwitterMobility
 
-cd ./model
-
+cd ./model <br>
 python traintest.py
