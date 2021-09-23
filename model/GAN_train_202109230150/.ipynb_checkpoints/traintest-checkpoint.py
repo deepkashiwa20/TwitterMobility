@@ -139,7 +139,6 @@ def traintest(D, G, x, y, adj, device):
     loss_hist['D_losses_test'] = []
     loss_hist['G_losses_test'] = []
     
-    
     for epoch in range(opt.epoch):
         # learning rate decay
         if epoch == 10:  # or epoch == 15:
