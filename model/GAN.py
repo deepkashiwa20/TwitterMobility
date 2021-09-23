@@ -337,7 +337,7 @@ def main():
     
     GPU = sys.argv[-1] if len(sys.argv) == 2 else '0'
     device = torch.device("cuda:{}".format(GPU)) if torch.cuda.is_available() else torch.device("cpu")
-    
+
     D = Discriminator(D_input_feat, D_hidden_feat, final_feat, num_head, dropout, num_block, num_variable, seq_len).to(device)
     G = Generator(G_input_feat, G_hidden_feat, final_feat, num_head, dropout, num_block, num_variable, seq_len).to(device)
     adj = (seq_len, num_variable, num_variable)
@@ -346,9 +346,9 @@ def main():
     G_x = (seq_len, num_variable, G_x_init_features)
     
     print('########## This is the model summary of Descriminator ############')
-    summary(D, (D_x, adj, c), device=device)
+    summary(D, [D_x, adj, c])
     print('########## This is the model summary of Generator ############')
-    summary(G, (G_x, adj, c), device=device)
+    summary(G, [G_x, adj, c])
     
 if __name__ == '__main__':
     main()
