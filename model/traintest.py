@@ -36,7 +36,7 @@ def show_loss_hist(hist, path):
     plt.plot(x, y1, label='D_loss_train')
     plt.plot(x, y2, label='G_loss_train')
     plt.plot(x, y3, label='D_loss_test')
-    plt.plot(x, y4, label='G_loss_test')  
+    plt.plot(x, y4, label='G_loss_test')
     plt.xlabel('Iter')
     plt.ylabel('Loss')
     plt.legend(loc=4)
@@ -63,7 +63,7 @@ def get_data(x, y, adj):
     # adj = adj.reshape(-1, seq_len, num_variable, num_variable)    
     x = x[:, :, np.newaxis].repeat(opt.channel, axis=2) # final_feat=channel=1
     x = min_max_normal(x)
-    y = y[:, np.newaxis, ].repeat(opt.num_variable, axis=1) # y is condition
+    y = y[:, np.newaxis, ].repeat(opt.num_variable, axis=1)     # y is condition
     adj = adj[np.newaxis, :, :].repeat(x.shape[0], axis=0)
     return x, y, adj
 
@@ -111,41 +111,40 @@ def sym_adj(adj):
     d_inv_sqrt[np.isinf(d_inv_sqrt)] = 0.
     d_mat_inv_sqrt = ss.diags(d_inv_sqrt)
     return np.array(adj.dot(d_mat_inv_sqrt).transpose().dot(d_mat_inv_sqrt).astype(np.float32).todense())
-    
+
 def traintest(D, G, x, y, adj, device):
     num_train_sample = int(x.shape[0] * opt.trainval_ratio)
     train_x, train_y, train_adj = x[:num_train_sample, ...], y[:num_train_sample, ...], adj[:num_train_sample, ...]
     test_x, test_y, test_adj = x[num_train_sample:, ...], y[num_train_sample:, ...], adj[num_train_sample:, ...]
-    
-    #dataset = Data.TensorDataset(x, y, adj)
-    #train_loader = Data.DataLoader(dataset=dataset, batch_size=opt.batch_size, shuffle=True)
+
+    # dataset = Data.TensorDataset(x, y, adj)
+    # train_loader = Data.DataLoader(dataset=dataset, batch_size=opt.batch_size, shuffle=True)
     train_x, train_y, train_adj = torch.tensor(train_x).to(device), torch.tensor(train_y).to(device), torch.tensor(train_adj).to(device)
     train_dataset = torch.utils.data.TensorDataset(train_x, train_y, train_adj)
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=opt.batch_size, shuffle=True)
-    
+
     test_x, test_y, test_adj = torch.tensor(test_x).to(device), torch.tensor(test_y).to(device), torch.tensor(test_adj).to(device)
     test_dataset = torch.utils.data.TensorDataset(test_x, test_y, test_adj)
-    test_loader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=opt.batch_size) # no shuffle here.
-    
+    test_loader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=opt.batch_size)  # no shuffle here.
+
     opt_D = torch.optim.Adam(D.parameters(), lr=opt.lr, betas=(opt.beta1, opt.beta2), weight_decay=opt.l2)
     opt_G = torch.optim.Adam(G.parameters(), lr=opt.lr, betas=(opt.beta1, opt.beta2), weight_decay=opt.l2)
 
     # Binary Cross Entropy loss
     BCE_loss = nn.BCELoss()
-    
+
     loss_hist = {}
     loss_hist['D_losses_train'] = []
     loss_hist['G_losses_train'] = []
     loss_hist['D_losses_test'] = []
     loss_hist['G_losses_test'] = []
-    
-    
+
     for epoch in range(opt.epoch):
         # learning rate decay
         if epoch == 10:  # or epoch == 15:
             opt_G.param_groups[0]['lr'] /= 10
             opt_D.param_groups[0]['lr'] /= 10
-        
+
         # training
         D_losses_train = []
         G_losses_train = []
@@ -154,8 +153,8 @@ def traintest(D, G, x, y, adj, device):
         for step, (b_x, b_y, b_adj) in enumerate(train_loader):
             ######################### Train Discriminator #######################
             opt_D.zero_grad()
-            num_seq = b_x.size(0)              # batch size of sequences
-            real_seq = Variable(b_x.to(device)).float()     # put tensor in Variable
+            num_seq = b_x.size(0)  # batch size of sequences
+            real_seq = Variable(b_x.to(device)).float()  # put tensor in Variable
             seq_label = Variable(b_y.to(device)).float()
             seq_adj = Variable(b_adj.to(device)).float()
             prob_real_seq_right_pair = D(real_seq, seq_adj, seq_label)
@@ -173,7 +172,7 @@ def traintest(D, G, x, y, adj, device):
             shuffled_adj = b_adj[shuffled_row_idx]
             shuffled_adj = Variable(shuffled_adj.to(device)).float()
             prob_real_seq_wrong_pair = D(real_shuffled_seq, shuffled_adj, seq_label)
-            
+
             D_loss = - torch.mean(torch.log(prob_real_seq_right_pair) + torch.log(1. - prob_fake_seq_pair) + torch.log(1. - prob_real_seq_wrong_pair))
             D_loss.backward()
             opt_D.step()
@@ -181,7 +180,7 @@ def traintest(D, G, x, y, adj, device):
 
             ########################### Train Generator #############################
             opt_G.zero_grad()
-            noise2 = torch.randn(num_seq, opt.seq_len * opt.init_dim * opt.num_variable).view(num_seq, opt.seq_len, opt.num_variable, opt.init_dim)
+            noise2 = torch.randn(num_seq, opt.seq_len * opt.init_dim * opt.num_variable).view(num_seq, opt.seq_len,opt.num_variable, opt.init_dim)
             noise2 = Variable(noise2.to(device))
 
             # create random label
@@ -192,12 +191,12 @@ def traintest(D, G, x, y, adj, device):
             G_loss.backward()
             opt_G.step()
             G_losses_train.append(G_loss.item())
-        
+
         D_losses_train = torch.mean(torch.FloatTensor(D_losses_train)).item()
         G_losses_train = torch.mean(torch.FloatTensor(G_losses_train)).item()
         loss_hist['D_losses_train'].append(D_losses_train)
         loss_hist['G_losses_train'].append(G_losses_train)
-        
+
         # testing
         D_losses_test = []
         G_losses_test = []
@@ -205,9 +204,9 @@ def traintest(D, G, x, y, adj, device):
         G.eval()
         with torch.no_grad():
             for step, (b_x, b_y, b_adj) in enumerate(test_loader):
-                ######################### Train Discriminator #######################    
-                num_seq = b_x.size(0)              # batch size of sequences
-                real_seq = Variable(b_x.to(device)).float()     # put tensor in Variable
+                ######################### Train Discriminator #######################
+                num_seq = b_x.size(0)  # batch size of sequences
+                real_seq = Variable(b_x.to(device)).float()  # put tensor in Variable
                 seq_label = Variable(b_y.to(device)).float()
                 seq_adj = Variable(b_adj.to(device)).float()
                 prob_real_seq_right_pair = D(real_seq, seq_adj, seq_label)
@@ -240,18 +239,18 @@ def traintest(D, G, x, y, adj, device):
                 D_result = D(G_result, seq_adj, seq_label).squeeze()
                 G_loss = BCE_loss(D_result, y_real)
                 G_losses_test.append(G_loss.item())
-        
+
         D_losses_test = torch.mean(torch.FloatTensor(D_losses_test)).item()
         G_losses_test = torch.mean(torch.FloatTensor(G_losses_test)).item()
         loss_hist['D_losses_test'].append(D_losses_test)
         loss_hist['G_losses_test'].append(G_losses_test)
-        
+
         print('Epoch', epoch, time.ctime(), 'D_loss_train, G_loss_train, D_loss_test, G_loss_test', D_losses_train, G_losses_train, D_losses_test, G_losses_test)
-        
-        if (epoch + 1) % 10 == 0:
+
+        if (epoch + 1) % 100 == 0:
             fake = fake_seq.cpu().data.numpy()
             truth = b_x.cpu().data.numpy()
-            # print(fake.shape, truth.shape) # the last batch size 839%64=23
+            print(fake.shape, truth.shape) # the last batch size 839%64=23
             sns.set_style('darkgrid')
             fig, ax = plt.subplots(1, 2, tight_layout=True, figsize=(12, 5))
             ax[0].plot(fake[0, :, :, 0])
@@ -264,9 +263,9 @@ def traintest(D, G, x, y, adj, device):
             ax[1].set_ylim(-1.0, 1.0)
             plt.savefig('{}/fake_seqs_{}.png'.format(path, epoch + 1))
             plt.close()
-        
+
     show_loss_hist(loss_hist, path=f'{path}/loss_hist.png')
-    torch.save(G.state_dict(), f'{path}/G_params.pkl')   # save parameters
+    torch.save(G.state_dict(), f'{path}/G_params.pkl')  # save parameters
     torch.save(D.state_dict(), f'{path}/D_params.pkl')
 
 DAYS = [date.strftime('%Y-%m-%d %H:%M:%S') for date in pd.date_range(start='2018-01-01 00:00:00', end='2021-02-28 23:59:59', freq='1H')]
@@ -325,7 +324,7 @@ def main():
     adj = sym_adj(adj01)
     print(inflow.shape, outflow.shape, odflow.shape, twitter.shape, onehottime.shape, adj.shape)
     
-    x, y, adj = get_data(inflow, onehottime, adj)
+    x, y, adj = get_data(inflow, onehottime, adj)       # inflow channel only
     seq_x, seq_y, seq_adj = get_seq_data(x), get_seq_data(y), get_seq_data(adj)
     print(seq_x.shape, seq_y.shape, seq_adj.shape, seq_x.min(), seq_x.max(), seq_adj.min(), seq_adj.max())
     # num_train_sample = int(seq_x.shape[0] * opt.trainval_ratio)
