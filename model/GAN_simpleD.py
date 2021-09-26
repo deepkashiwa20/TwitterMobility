@@ -75,36 +75,44 @@ def attention(q, k, v, d_k, mask=None, dropout=None):
         scores = scores.masked_fill(mask == 0, -1e9)
 
     scores = F.softmax(scores, dim=-1)
-    print('attention scores', scores.size())
+    # print('attention scores', scores.size())
     
     if dropout is not None:
         scores = dropout(scores)
 
     output = torch.matmul(scores, v)
-    print('attention output', output.size())
     return output
 
 
 class MultiHeadAttention(nn.Module):
     def __init__(self, heads, d_model, dropout=0.1):
         super().__init__()
-
-        self.d_model = d_model
-        self.d_k = d_model // heads
+        # self.d_model = d_model
+        # self.d_k = d_model // heads
+        # self.h = heads
+        # self.q_linear = nn.Linear(d_model, d_model)
+        # self.v_linear = nn.Linear(d_model, d_model)
+        # self.k_linear = nn.Linear(d_model, d_model)
+        # self.dropout = nn.Dropout(dropout)
+        # self.out = nn.Linear(d_model, d_model)
+        
+        # head = 1 or 7
+        feature = d_model
+        self.d_k = feature
+        self.d_model = heads * feature
         self.h = heads
-
-        self.q_linear = nn.Linear(d_model, d_model)
-        self.v_linear = nn.Linear(d_model, d_model)
-        self.k_linear = nn.Linear(d_model, d_model)
-
+        self.q_linear = nn.Linear(self.d_k, self.d_model)
+        self.v_linear = nn.Linear(self.d_k, self.d_model)
+        self.k_linear = nn.Linear(self.d_k, self.d_model)
         self.dropout = nn.Dropout(dropout)
-        self.out = nn.Linear(d_model, d_model)
+        self.out = nn.Linear(self.d_model, self.d_k)
 
     def forward(self, q, k, v, mask=None):
         
         bs = q.size(0)
-
+        
         print('MultiHeadAttention  d_k * heads = d_model', self.d_k, self.h, self.d_model)
+        # print('MultiHeadAttention  d_k * heads = d_model', self.d_k, self.h, self.d_model)
         # perform linear operation and split into N heads
         k = self.k_linear(k).view(bs, -1, self.h, self.d_k)
         q = self.q_linear(q).view(bs, -1, self.h, self.d_k)
@@ -164,7 +172,7 @@ class Building_Block(nn.Module):
         self.dropout_2 = nn.Dropout(dropout)
 
     def forward(self, x):  # here x includes c
-        print('Building Block...', x.size())
+        # print('Building Block...', x.size())
         # input x <- (batch_size, sequence_length, pixel_num * feature_num)
         x2 = self.norm_1(x)
         new_x = x + self.dropout_1(self.attn(x2, x2, x2))
@@ -309,10 +317,11 @@ class Discriminator(nn.Module):
         return outputs
 
 def main():
-    num_head = 2
+    num_head = 2 # same with num_variable
     dropout = 0.1
-    num_block = 3 # original N
-    num_variable = 100 # How many variables we want to predict, original pix_num 10*10=100.
+    num_block_D = 2 # original N
+    num_block_G = 3 # original N
+    num_variable = 7 # How many variables we want to predict, original pix_num 10*10=100.
     final_feat = 1
     seq_len = 12
     num_condition = 32
@@ -326,8 +335,8 @@ def main():
     GPU = sys.argv[-1] if len(sys.argv) == 2 else '1'
     device = torch.device("cuda:{}".format(GPU)) if torch.cuda.is_available() else torch.device("cpu")
     
-    D = Discriminator(D_input_feat, D_hidden_feat, final_feat, num_head, dropout, 2, num_variable, seq_len).to(device)
-    G = Generator(G_input_feat, G_hidden_feat, final_feat, num_head, dropout, num_block, num_variable, seq_len).to(device)
+    D = Discriminator(D_input_feat, D_hidden_feat, final_feat, num_head, dropout, num_block_D, num_variable, seq_len).to(device)
+    G = Generator(G_input_feat, G_hidden_feat, final_feat, num_head, dropout, num_block_G, num_variable, seq_len).to(device)
     adj = (seq_len, num_variable, num_variable)
     c = (seq_len, num_variable, num_condition)
     D_x = (seq_len, num_variable, D_x_init_features)

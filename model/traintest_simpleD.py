@@ -239,8 +239,8 @@ def traintest(D, G, x, y, adj, device):
                 shuffled_adj = Variable(shuffled_adj.to(device)).float()
                 prob_real_seq_wrong_pair = D(real_shuffled_seq, shuffled_adj, seq_label)
 
-                D_loss = - torch.mean(torch.log(prob_real_seq_right_pair) + torch.log(1. - prob_fake_seq_pair) + torch.log(1. - prob_real_seq_wrong_pair))
-                # D_loss = - torch.mean(torch.log(prob_real_seq_right_pair) + torch.log(1. - prob_fake_seq_pair))
+                # D_loss = - torch.mean(torch.log(prob_real_seq_right_pair) + torch.log(1. - prob_fake_seq_pair) + torch.log(1. - prob_real_seq_wrong_pair))
+                D_loss = - torch.mean(torch.log(prob_real_seq_right_pair) + torch.log(1. - prob_fake_seq_pair))
                 D_losses_test.append(D_loss.item())
 
                 ########################### Train Generator #############################
@@ -301,7 +301,7 @@ TARGET_AREA_ID = [7, 8, 9, 10, 11, 12, 13] # should correspond to area id.
 parser = argparse.ArgumentParser()
 parser.add_argument("--epoch", type=int, default=1000, help="number of epochs of training") # original 1500
 parser.add_argument("--batch_size", type=int, default=32, help="size of the batches")
-parser.add_argument("--lr", type=float, default=0.001, help="adam: learning rate")
+parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
 parser.add_argument("--beta1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--beta2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--adj_bar", type=float, default=0.47, help="adj bar")
@@ -309,10 +309,11 @@ parser.add_argument('--seed', type=int, default=1234, help='Random seed.')
 parser.add_argument('--l2', type=float, default=0.1, help='l2 penalty')
 parser.add_argument('--dropout', type=float, default=0.1, help='dropout')
 parser.add_argument('--seq_len', type=int, default=12, help='sequence length of images, which should be even nums (2,4,6,12)')
-parser.add_argument('--num_head', type=int, default=2, help='number of heads in self-attention')
-parser.add_argument('--num_block', type=int, default=2, help='repeating times of buiding block') # original 3
+parser.add_argument('--num_block_D', type=int, default=2, help='repeating times of buiding block for D') # original 3
+parser.add_argument('--num_block_G', type=int, default=3, help='repeating times of buiding block for G') # original 3
+parser.add_argument('--num_head', type=int, default=7, help='number of heads in self-attention') # same with num_variable, current 7
 parser.add_argument('--num_variable', type=int, default=7, help='total number of the target variables') # current 7
-parser.add_argument('--D_hidden_feat', type=int, default=8, help='hidden features of D')
+parser.add_argument('--D_hidden_feat', type=int, default=16, help='hidden features of D')
 parser.add_argument('--G_hidden_feat', type=int, default=64, help='hidden features of G')
 parser.add_argument('--channel', type=int, default=1, help='channel')
 parser.add_argument('--D_final_feat', type=int, default=1, help='output features of D')
@@ -356,8 +357,8 @@ def main():
     # print(train_seq_x.shape, train_seq_y.shape, train_seq_adj.shape)
     # print(test_seq_x.shape, test_seq_y.shape, test_seq_adj.shape)
     
-    D = Discriminator(opt.D_input_feat, opt.D_hidden_feat, opt.D_final_feat, opt.num_head, opt.dropout, 1, opt.num_variable, opt.seq_len).to(device)
-    G = Generator(opt.G_input_feat, opt.G_hidden_feat, opt.G_final_feat, opt.num_head, opt.dropout, opt.num_block, opt.num_variable, opt.seq_len).to(device)
+    D = Discriminator(opt.D_input_feat, opt.D_hidden_feat, opt.D_final_feat, opt.num_head, opt.dropout, opt.num_block_D, opt.num_variable, opt.seq_len).to(device)
+    G = Generator(opt.G_input_feat, opt.G_hidden_feat, opt.G_final_feat, opt.num_head, opt.dropout, opt.num_block_G, opt.num_variable, opt.seq_len).to(device)
     
     start = time.ctime()
     traintest(D, G, seq_x, seq_y, seq_adj, device)
