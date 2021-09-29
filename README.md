@@ -1,7 +1,7 @@
 # TwitterMobility
 
-pip install torch-summary
-pip install jpholiday
+pip install torch-summary <br>
+pip install jpholiday <br>
 
 cd ./model <br>
 python traintest.py
