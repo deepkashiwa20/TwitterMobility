@@ -144,6 +144,7 @@ def traintest(D, G, x, y, adj, device):
 
     # Binary Cross Entropy loss
     BCE_loss = nn.BCELoss()
+    MAE_loss = nn.L1Loss()
 
     loss_hist = {}
     loss_hist['D_losses_train'] = []
@@ -200,7 +201,8 @@ def traintest(D, G, x, y, adj, device):
             y_real = Variable(torch.ones(num_seq).to(device))
             G_result = G(noise2, seq_adj, seq_label)
             D_result = D(G_result, seq_adj, seq_label).squeeze()
-            G_loss = BCE_loss(D_result, y_real)
+            #print(BCE_loss(D_result, y_real), MAE_loss(G_result, real_seq))   # check magnitude
+            G_loss = BCE_loss(D_result, y_real) + 10 * MAE_loss(G_result, real_seq)     # balancing factor
             G_loss.backward()
             opt_G.step()
             G_losses_train.append(G_loss.item())
@@ -218,7 +220,7 @@ def traintest(D, G, x, y, adj, device):
         G.eval()
         with torch.no_grad():
             for step, (b_x, b_y, b_adj) in enumerate(test_loader):
-                ######################### Train Discriminator #######################
+                ######################### Test Discriminator #######################
                 num_seq = b_x.size(0)  # batch size of sequences
                 real_seq = Variable(b_x.to(device)).float()  # put tensor in Variable
                 seq_label = Variable(b_y.to(device)).float()
@@ -242,7 +244,7 @@ def traintest(D, G, x, y, adj, device):
                 D_loss = - torch.mean(torch.log(prob_real_seq_right_pair) + torch.log(1. - prob_fake_seq_pair) + torch.log(1. - prob_real_seq_wrong_pair))
                 D_losses_test.append(D_loss.item())
 
-                ########################### Train Generator #############################
+                ########################### Test Generator #############################
                 opt_G.zero_grad()
                 noise2 = torch.randn(num_seq, opt.seq_len * opt.init_dim * opt.num_variable).view(num_seq, opt.seq_len, opt.num_variable, opt.init_dim)
                 noise2 = Variable(noise2.to(device))
